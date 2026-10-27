@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📚 Kho Lưu Trữ Truyện & Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>📚 Kho Lưu Trữ Truyện & Game</h1>
+      <div class="backup-actions">
+        <button type="button" id="exportBtn" class="btn-secondary" title="Tải xuống file sao lưu">📤 Sao lưu</button>
+        <button type="button" id="importBtn" class="btn-secondary" title="Phục hồi từ file">📥 Phục hồi</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;">
+      </div>
+    </div>
+    <p class="subtitle">Lưu trữ truyện và game của bạn ngay trên trình duyệt</p>
+  </header>
+
+  <main>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="stories">📖 Truyện</button>
+      <button class="tab" data-tab="games">🎮 Game</button>
+      <button class="tab" data-tab="history">⏱️ Lịch sử</button>
+    </div>
+
+    <!-- Form thêm mới -->
+    <section class="add-section">
+      <h2 id="formTitle">➕ Thêm truyện mới</h2>
+      <form id="addForm">
+        <input type="hidden" id="itemType" value="story">
+        <input type="hidden" id="editId" value="">
+
+        <div class="form-group">
+          <label for="title">Tiêu đề *</label>
+          <input type="text" id="title" placeholder="Nhập tiêu đề..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="author">Tác giả</label>
+          <input type="text" id="author" placeholder="Tên tác giả...">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Mô tả</label>
+          <textarea id="description" rows="2" placeholder="Mô tả ngắn..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="link">Link (URL)</label>
+          <input type="url" id="link" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+          <label>Ảnh bìa</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="url" id="image" placeholder="Dán URL ảnh..." style="flex: 1;">
+            <span style="padding: 0.5rem; color: #999;">Hoặc</span>
+            <input type="file" id="imageFile" accept="image/*" style="padding: 0.4rem;">
+          </div>
+          <small style="color: #666;">(Nếu chọn file, ảnh sẽ được lưu dưới dạng Base64)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Thẻ (phân cách bằng dấu phẩy)</label>
+          <input type="text" id="tags" placeholder="VD: Hoàn thành, Ngôn tình, Cổ đại">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" id="submitBtn">Thêm mới</button>
+          <button type="button" class="btn-secondary" id="cancelBtn" style="display:none;">Hủy</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Danh sách -->
+    <section class="list-section">
+      <div class="list-header">
+        <h2 id="listTitle">📖 Danh sách truyện</h2>
+        <div class="search-actions">
+          <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm...">
+          <select id="sortSelect">
+            <option value="newest">Mới thêm gần đây</option>
+            <option value="name">Tên A-Z</option>
+            <option value="updated">Mới cập nhật</option>
+          </select>
+          <label class="fav-filter-label">
+            <input type="checkbox" id="filterFavorites"> ⭐ Chỉ hiện yêu thích
+          </label>
+          <button type="button" id="toggleFilterBtn" class="btn-secondary">⚙️ Bộ lọc</button>
+        </div>
+      </div>
+
+      <!-- BỘ LỌC NÂNG CAO -->
+      <div id="advancedFilter" class="advanced-filter" style="display: none;">
+        <div class="filter-row">
+          <div class="filter-label">Tình trạng:</div>
+          <div class="filter-options">
+            <label><input type="checkbox" data-category="Tình trạng" value="Hoàn thành"> Hoàn thành</label>
+            <label><input type="checkbox" data-category="Tình trạng" value="Còn tiếp"> Còn tiếp</label>
+            <label><input type="checkbox" data-category="Tình trạng" value="Tạm ngưng"> Tạm ngưng</label>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-label">Tính chất:</div>
+          <div class="filter-options">
+            <label><input type="checkbox" data-category="Tính chất" value="Nguyên sang"> Nguyên sang</label>
+            <label><input type="checkbox" data-category="Tính chất" value="Diễn sinh"> Diễn sinh</label>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-label">Giới tính:</div>
+          <div class="filter-options">
+            <label><input type="checkbox" data-category="Giới tính" value="Ngôn tình"> Ngôn tình</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Nam sinh"> Nam sinh</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Đam mỹ"> Đam mỹ</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Bách hợp"> Bách hợp</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Nữ tôn"> Nữ tôn</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Không CP"> Không CP</label>
+            <label><input type="checkbox" data-category="Giới tính" value="Đa nguyên"> Đa nguyên</label>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-label">Thời đại:</div>
+          <div class="filter-options">
+            <label><input type="checkbox" data-category="Thời đại" value="Cổ đại"> Cổ đại</label>
+            <label><input type="checkbox" data-category="Thời đại" value="Cận đại"> Cận đại</label>
+            <label><input type="checkbox" data-category="Thời đại" value="Hiện đại"> Hiện đại</label>
+            <label><input type="checkbox" data-category="Thời đại" value="Tương lai"> Tương lai</label>
+            <label><input type="checkbox" data-category="Thời đại" value="Giả tưởng lịch sử"> Giả tưởng lịch sử</label>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-label">Kết thúc:</div>
+          <div class="filter-options">
+            <label><input type="checkbox" data-category="Kết thúc" value="HE"> HE</label>
+            <label><input type="checkbox" data-category="Kết thúc" value="SE"> SE</label>
+            <label><input type="checkbox" data-category="Kết thúc" value="OE"> OE</label>
+          </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-label">Loại hình:</div>
+          <div class="filter-options grid-options">
+            <label><input type="checkbox" data-category="Loại hình" value="Tình cảm"> Tình cảm</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Làm sự nghiệp"> Làm sự nghiệp</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Tiên hiệp"> Tiên hiệp</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Huyền huyễn"> Huyền huyễn</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Khoa học viễn tưởng"> Khoa học viễn tưởng</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Mạt thế"> Mạt thế</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Sinh tồn"> Sinh tồn</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Tranh bá"> Tranh bá</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Võ hiệp"> Võ hiệp</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Trinh thám"> Trinh thám</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Kinh dị"> Kinh dị</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Quan trường"> Quan trường</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Kinh thương"> Kinh thương</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Quân sự"> Quân sự</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Xây dựng"> Xây dựng</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Làm ruộng"> Làm ruộng</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Huyền học"> Huyền học</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Phim ảnh"> Phim ảnh</label>
+            <label><input type="checkbox" data-category="Loại hình" value="Manga anime"> Manga anime</label>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button type="button" id="clearFilterBtn" class="btn-delete">Xóa tất cả bộ lọc</button>
+        </div>
+      </div>
+
+      <div id="itemsList" class="items-grid"></div>
+      <p id="emptyMessage" class="empty-message">Chưa có mục nào. Hãy thêm mới ở trên!</p>
+    </section>
+
+    <!-- LỊCH SỬ -->
+    <section id="historySection" class="list-section" style="display: none;">
+      <div class="list-header">
+        <h2>⏱️ Lịch sử đọc & chơi</h2>
+        <button type="button" id="clearHistoryBtn" class="btn-delete" style="padding: 0.5rem 1rem;">🗑️ Xóa toàn bộ</button>
+      </div>
+      <div id="historyList" class="items-grid"></div>
+      <p id="emptyHistoryMsg" class="empty-message">Chưa có lịch sử nào.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2024 Kho Lưu Trữ Cá Nhân — Dữ liệu lưu trên trình duyệt của bạn</p>
+  </footer>
+
+  <!-- MODAL NHẬP CHƯƠNG / LEVEL -->
+  <div id="historyModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3 id="modalTitle">Lưu tiến trình</h3>
+      <p id="modalDesc" style="margin-bottom: 1rem; color: #bbb;">Nhập chương/level bạn đang đọc/chơi dở:</p>
+      <input type="text" id="progressInput" placeholder="VD: Chương 15, Level 5..." style="width: 100%; padding: 0.7rem; background: #1a1a2e; border: 1px solid #444; border-radius: 8px; color: #fff; margin-bottom: 1rem;">
+      <div class="form-actions" style="justify-content: flex-end;">
+        <button type="button" class="btn-secondary" id="cancelProgressBtn">Hủy</button>
+        <button type="button" class="btn-primary" id="saveProgressBtn">Lưu & Chuyển đến</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
