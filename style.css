@@ -1,5 +1,5 @@
 /* =========================================
-   RESET & CƠ BẢN (TỐI ƯU FULL MÀN HÌNH)
+   RESET & CƠ BẢN (TOÀN MÀN HÌNH)
    ========================================= */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
@@ -11,7 +11,6 @@ body {
   -webkit-tap-highlight-color: transparent; 
 }
 
-/* Mở rộng toàn trang cho phần main */
 main { 
   width: 100%; 
   max-width: 100%; 
@@ -19,7 +18,7 @@ main {
 }
 
 /* =========================================
-   HEADER & BACKUP (FULL WIDTH)
+   HEADER & BACKUP
    ========================================= */
 header { 
   width: 100%; 
@@ -41,7 +40,7 @@ header h1 { font-size: 1.8rem; color: #a78bfa; }
 .backup-actions { display: flex; gap: 0.5rem; }
 
 /* =========================================
-   TABS & SECTIONS (FULL WIDTH)
+   TABS & SECTIONS
    ========================================= */
 .tabs { 
   display: flex; 
@@ -114,7 +113,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 #toggleFilterBtn { background: #2a2a40; border: 1px solid #444; color: #a78bfa; padding: 0.65rem 1.2rem; border-radius: 8px; font-weight: 600; }
 
 /* =========================================
-   ITEMS GRID & CARDS (TỰ ĐỘNG DÃN THEO MÀN HÌNH)
+   ITEMS GRID & CARDS
    ========================================= */
 .items-grid { 
   display: grid; 
@@ -171,7 +170,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .filter-actions { margin-top: 1rem; text-align: right; }
 
 /* =========================================
-   MODAL DÀNH CHO TIẾN TRÌNH & CHƯƠNG
+   MODALS CƠ BẢN & QUẢN LÝ CHƯƠNG
    ========================================= */
 .modal-overlay { 
   position: fixed; 
@@ -190,43 +189,104 @@ button:active:not(:disabled) { transform: scale(0.97); }
   border-radius: 12px; 
   padding: 1.5rem; 
   width: 100%; 
-  max-width: 480px; 
+  max-width: 450px; 
   box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
 }
+.chapter-modal-content {
+  max-width: 650px !important;
+}
+
 .progress-badge { display: inline-block; background: #059669; color: #fff; font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 6px; margin-top: 0.5rem; font-weight: bold; width: fit-content; }
 .empty-message { text-align: center; color: #666; padding: 2rem; font-style: italic; }
 
 /* =========================================
-   TRÌNH ĐỌC TRUYỆN FULL MÀN HÌNH (READER FULL SCREEN)
+   ÉP TRÌNH ĐỌC TRUYỆN FULL SCREEN 100%
    ========================================= */
 #readerModal {
   padding: 0 !important;
+  z-index: 9999 !important;
 }
-#readerModal .modal-content {
+
+#readerModal .reader-modal-content {
   width: 100vw !important;
   height: 100vh !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 1.2rem 2rem !important;
   border-radius: 0 !important;
   border: none !important;
-  margin: 0 !important;
-  padding: 1.5rem 3rem !important;
   background: #0f0f18 !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-#readerBody {
+.reader-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #2d2d42;
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+#readerStoryTitle {
+  font-size: 0.95rem;
+  color: #888;
+  font-weight: normal;
+}
+
+#readerChapterTitle {
+  font-size: 1.3rem;
+  color: #4facfe;
+  margin-top: 0.2rem;
+}
+
+.close-reader-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+.close-reader-btn:hover {
+  color: #f43f5e;
+}
+
+.reader-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  gap: 10px;
+}
+
+#readerChapterSelect {
+  padding: 0.5rem 0.8rem;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 6px;
   flex: 1;
-  overflow-y: auto;
-  padding: 2rem 3rem;
-  background: #141422;
-  border-radius: 10px;
-  line-height: 2;
-  font-size: 1.15rem;
-  white-space: pre-wrap;
-  color: #e2e8f0;
-  border: 1px solid #28283d;
+  max-width: 300px;
+}
+
+#readerBody {
+  flex: 1 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  padding: 1.8rem 2.5rem !important;
+  background: #141422 !important;
+  border-radius: 10px !important;
+  line-height: 2 !important;
+  font-size: 1.15rem !important;
+  white-space: pre-wrap !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #28283d !important;
 }
 
 /* Scrollbar tinh tế */
@@ -248,7 +308,7 @@ footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; b
 @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
 /* =========================================
-   RESPONSIVE CHO ĐIỆN THOẠI (MOBILE FULL SCREEN)
+   RESPONSIVE MOBILE
    ========================================= */
 @media (max-width: 768px) {
   header { padding: 1rem; }
@@ -284,9 +344,8 @@ footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; b
   
   .btn-fav { width: 32px; height: 32px; font-size: 1rem; top: 6px; right: 6px; }
 
-  /* Giao diện đọc truyện Full màn hình trên Mobile */
-  #readerModal .modal-content {
-    padding: 0.8rem 0.8rem !important;
+  #readerModal .reader-modal-content {
+    padding: 0.8rem !important;
   }
   #readerBody {
     padding: 1rem 0.8rem !important;
