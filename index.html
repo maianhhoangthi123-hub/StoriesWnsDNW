@@ -189,7 +189,7 @@
     <p>© 2024 Kho Lưu Trữ Cá Nhân — Dữ liệu lưu trên trình duyệt của bạn</p>
   </footer>
 
-  <!-- MODAL NHẬP CHƯƠNG / LEVEL -->
+  <!-- MODAL NHẬP CHƯƠNG / LEVEL TIẾN TRÌNH -->
   <div id="historyModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
       <h3 id="modalTitle">Lưu tiến trình</h3>
@@ -198,6 +198,79 @@
       <div class="form-actions" style="justify-content: flex-end;">
         <button type="button" class="btn-secondary" id="cancelProgressBtn">Hủy</button>
         <button type="button" class="btn-primary" id="saveProgressBtn">Lưu & Chuyển đến</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL QUẢN LÝ & TẠO CHƯƠNG TRUYỆN -->
+  <div id="chapterModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 650px; width: 95%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 id="chapterModalTitle">📜 Quản lý chương</h3>
+        <button type="button" id="closeChapterModalBtn" style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Form thêm / sửa chương -->
+      <form id="chapterForm" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h4 id="chapterFormTitle" style="margin-bottom: 0.8rem; color: #4facfe;">➕ Thêm chương mới</h4>
+        <input type="hidden" id="chapterStoryId" value="">
+        <input type="hidden" id="chapterEditIndex" value="-1">
+
+        <div style="display: flex; gap: 10px; margin-bottom: 0.8rem; flex-wrap: wrap;">
+          <input type="text" id="chapterTitleInput" placeholder="Tên/Số chương (VD: Chương 1: Mở đầu)..." required style="flex: 2; min-width: 200px; padding: 0.6rem; background: #1a1a2e; border: 1px solid #444; border-radius: 6px; color: #fff;">
+          <input type="url" id="chapterLinkInput" placeholder="Link chương (nếu đọc online)..." style="flex: 3; min-width: 220px; padding: 0.6rem; background: #1a1a2e; border: 1px solid #444; border-radius: 6px; color: #fff;">
+        </div>
+
+        <div style="margin-bottom: 0.8rem;">
+          <textarea id="chapterContentInput" rows="4" placeholder="Nội dung chương (dán văn bản vào đây nếu lưu offline)..." style="width: 100%; padding: 0.6rem; background: #1a1a2e; border: 1px solid #444; border-radius: 6px; color: #fff; resize: vertical;"></textarea>
+        </div>
+
+        <div class="form-actions" style="justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn-secondary" id="cancelChapterEditBtn" style="display: none;">Hủy sửa</button>
+          <button type="submit" class="btn-primary" id="saveChapterBtn">Lưu chương</button>
+        </div>
+      </form>
+
+      <!-- Danh sách chương đã tạo -->
+      <h4>📋 Danh sách chương đã tạo</h4>
+      <div id="chapterListContainer" style="max-height: 220px; overflow-y: auto; margin-top: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
+        <!-- Danh sách chương sẽ load động từ JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ĐỌC TRUYỆN (TRÌNH ĐỌC CÓ TIẾN / LÙI CHƯƠNG) -->
+  <div id="readerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 850px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+      <!-- Tiêu đề truyện & chương -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 0.8rem; margin-bottom: 1rem;">
+        <div>
+          <h3 id="readerStoryTitle" style="font-size: 1.1rem; color: #888; font-weight: normal;">Tên truyện</h3>
+          <h2 id="readerChapterTitle" style="font-size: 1.3rem; color: #4facfe; margin-top: 0.2rem;">Chương 1</h2>
+        </div>
+        <button type="button" id="closeReaderBtn" style="background:none; border:none; color:#fff; font-size:1.6rem; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Điều hướng Tiến / Lùi ở đầu trang đọc -->
+      <div class="reader-nav" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: rgba(255,255,255,0.05); padding: 0.5rem 0.8rem; border-radius: 8px; flex-wrap: wrap; gap: 10px;">
+        <button type="button" id="prevChapterBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">⏮️ Chương trước</button>
+        
+        <select id="readerChapterSelect" style="padding: 0.5rem; background: #1a1a2e; border: 1px solid #444; color: #fff; border-radius: 6px; max-width: 250px; flex: 1;">
+          <!-- Dropdown chọn chương nhanh -->
+        </select>
+
+        <button type="button" id="nextChapterBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">Chương sau ⏭️</button>
+      </div>
+
+      <!-- Khung hiển thị nội dung chương -->
+      <div id="readerBody" style="flex: 1; overflow-y: auto; padding: 1rem; background: #12121c; border-radius: 8px; line-height: 1.8; font-size: 1.05rem; white-space: pre-wrap; color: #e0e0e0; min-height: 250px;">
+        <!-- Nội dung chương load ở đây -->
+      </div>
+
+      <!-- Điều hướng Tiến / Lùi ở cuối trang đọc -->
+      <div class="reader-nav" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; background: rgba(255,255,255,0.05); padding: 0.5rem 0.8rem; border-radius: 8px; flex-wrap: wrap; gap: 10px;">
+        <button type="button" id="prevChapterBtnBottom" class="btn-secondary" style="padding: 0.5rem 1rem;">⏮️ Chương trước</button>
+        <button type="button" id="nextChapterBtnBottom" class="btn-secondary" style="padding: 0.5rem 1rem;">Chương sau ⏭️</button>
       </div>
     </div>
   </div>
