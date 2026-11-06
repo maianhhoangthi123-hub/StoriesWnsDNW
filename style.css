@@ -35,7 +35,7 @@ section h2 { margin-bottom: 1rem; color: #c4b5fd; font-size: 1.25rem; }
 .form-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
 
 /* =========================================
-   BUTTONS (Tăng kích thước để dễ chạm trên đt)
+   BUTTONS
    ========================================= */
 button, .btn-open, .btn-continue { cursor: pointer; font-family: inherit; position: relative; overflow: hidden; }
 .btn-primary, .btn-secondary { padding: 0.7rem 1.2rem; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; transition: transform 0.1s, opacity 0.2s; }
@@ -43,7 +43,8 @@ button, .btn-open, .btn-continue { cursor: pointer; font-family: inherit; positi
 .btn-primary:hover { background: #6d28d9; }
 .btn-secondary { background: #333; color: #e0e0e0; }
 .btn-secondary:hover { background: #444; }
-button:active { transform: scale(0.97); }
+button:disabled { cursor: not-allowed; opacity: 0.4 !important; }
+button:active:not(:disabled) { transform: scale(0.97); }
 
 /* =========================================
    LIST HEADER & FILTERS
@@ -57,7 +58,7 @@ button:active { transform: scale(0.97); }
 /* =========================================
    ITEMS GRID & CARDS
    ========================================= */
-.items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+.items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.2rem; }
 .item-card { background: #1a1a2e; border: 1px solid #333; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; position: relative; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
 .item-card:hover { transform: translateY(-5px); border-color: #a78bfa; box-shadow: 0 12px 24px rgba(124, 58, 237, 0.25), 0 4px 8px rgba(0, 0, 0, 0.3); }
 .item-image { width: 100%; height: 160px; object-fit: cover; background: #2a2a40; }
@@ -75,12 +76,14 @@ button:active { transform: scale(0.97); }
 .btn-fav.active { color: #fbbf24; }
 
 /* Card Actions */
-.item-actions { display: flex; gap: 0.4rem; padding: 0.6rem 1rem 1rem; }
-.item-actions button, .item-actions a { flex: 1; padding: 0.6rem 0; font-size: 0.85rem; border-radius: 6px; border: none; text-align: center; text-decoration: none; font-weight: 600; color: #fff; }
+.item-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.6rem 1rem 1rem; }
+.item-actions button, .item-actions a { flex: 1 1 calc(50% - 0.4rem); min-width: 80px; padding: 0.6rem 0; font-size: 0.82rem; border-radius: 6px; border: none; text-align: center; text-decoration: none; font-weight: 600; color: #fff; }
 .btn-open { background: #2563eb; }
 .btn-edit { background: #f59e0b; }
 .btn-delete { background: #dc2626; }
 .btn-continue { background: #10b981; }
+.item-actions button[data-action="read"] { background: #059669; }
+.item-actions button[data-action="chapters"] { background: #4f46e5; }
 .item-actions button:hover, .item-actions a:hover { opacity: 0.85; }
 
 /* =========================================
@@ -96,12 +99,18 @@ button:active { transform: scale(0.97); }
 .filter-actions { margin-top: 1rem; text-align: right; }
 
 /* =========================================
-   MODAL & MISC
+   MODAL & READER
    ========================================= */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; backdrop-filter: blur(4px); }
 .modal-content { background: #1e1e2e; border: 1px solid #444; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .progress-badge { display: inline-block; background: #059669; color: #fff; font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 6px; margin-top: 0.5rem; font-weight: bold; width: fit-content; }
 .empty-message { text-align: center; color: #666; padding: 2rem; font-style: italic; }
+
+/* Custom scrollbars trong modal */
+#chapterListContainer::-webkit-scrollbar, #readerBody::-webkit-scrollbar { width: 6px; }
+#chapterListContainer::-webkit-scrollbar-thumb, #readerBody::-webkit-scrollbar-thumb { background: #333355; border-radius: 4px; }
+#readerBody::-webkit-scrollbar-track { background: #12121c; }
+
 footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; border-top: 1px solid #333; }
 
 /* =========================================
@@ -110,63 +119,54 @@ footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; b
 .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple-animation 0.6s linear; background-color: rgba(255, 255, 255, 0.4); pointer-events: none; }
 @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
-
-/* =========================================================================
-   TỐI ƯU GIAO DIỆN ĐIỆN THOẠI (RESPONSIVE MOBILE)
-   ========================================================================= */
-
+/* =========================================
+   TỐI ƯU GIAO DIỆN ĐIỆN THOẠI (RESPONSIVE)
+   ========================================= */
 @media (max-width: 768px) {
-  /* Header */
   header { padding: 1rem; }
   .header-top { flex-direction: column; text-align: center; gap: 0.8rem; }
   header h1 { font-size: 1.5rem; }
   .backup-actions { width: 100%; justify-content: center; }
 
-  /* Form & Sections */
   main { padding: 1rem 0.5rem; }
   section { padding: 1rem; border-radius: 10px; }
-  .form-group input, .form-group textarea, .form-group select { font-size: 16px; /* Ngăn iOS tự động zoom khi gõ */ }
+  .form-group input, .form-group textarea, .form-group select { font-size: 16px; }
   
-  /* Tabs */
   .tabs { margin-bottom: 1.5rem; }
   .tab { padding: 0.6rem 1rem; font-size: 0.95rem; flex: 1; text-align: center; }
 
-  /* List Header & Filters */
   .list-header { flex-direction: column; align-items: stretch; gap: 1rem; }
   .search-actions { flex-direction: column; align-items: stretch; gap: 0.8rem; }
   #searchInput, #sortSelect, #toggleFilterBtn { width: 100%; }
   .fav-filter-label { justify-content: center; padding: 0.7rem; }
   
-  /* Advanced Filter */
   .filter-row { flex-direction: column; gap: 0.5rem; padding: 1rem 0; }
   .filter-options { gap: 0.8rem; }
   .grid-options { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
   
-  /* Grid Layout - Hiển thị 1 cột hoặc 2 cột tùy độ rộng đt */
   .items-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.8rem; }
   
-  /* Card Items */
   .item-image, .item-image-placeholder { height: 120px; font-size: 2.5rem; }
   .item-body { padding: 0.8rem; gap: 0.2rem; }
   .item-title { font-size: 0.95rem; padding-right: 0; }
-  .item-desc { font-size: 0.8rem; -webkit-line-clamp: 2; /* Chỉ hiện 2 dòng mô tả trên đt */ }
+  .item-desc { font-size: 0.8rem; -webkit-line-clamp: 2; }
   
-  /* Nút bấm trong thẻ to hơn để dễ chạm */
-  .item-actions { padding: 0.5rem; flex-wrap: wrap; }
-  .item-actions button, .item-actions a { padding: 0.6rem 0; flex: 1 1 45%; font-size: 0.8rem; }
+  .item-actions { padding: 0.5rem; gap: 0.3rem; }
+  .item-actions button, .item-actions a { padding: 0.5rem 0; flex: 1 1 calc(50% - 0.3rem); font-size: 0.78rem; }
   
-  /* Star button */
   .btn-fav { width: 30px; height: 30px; font-size: 1rem; top: 5px; right: 5px; }
 
-  /* Modal */
-  .modal-content { padding: 1.2rem; }
+  .modal-content { padding: 1rem; }
   .form-actions { flex-direction: column; }
   .form-actions button { width: 100%; }
+
+  /* Giao diện thanh đọc truyện trên Mobile */
+  .reader-nav { flex-direction: column; align-items: stretch; gap: 0.5rem !important; }
+  .reader-nav button, .reader-nav select { width: 100% !important; max-width: none !important; }
 }
 
-/* Điện thoại màn hình rất nhỏ (dưới 400px) */
 @media (max-width: 400px) {
-  .items-grid { grid-template-columns: 1fr; /* 1 cột to rõ ràng */ }
+  .items-grid { grid-template-columns: 1fr; }
   .item-image, .item-image-placeholder { height: 180px; }
   .item-actions button, .item-actions a { flex: 1 1 100%; }
 }
