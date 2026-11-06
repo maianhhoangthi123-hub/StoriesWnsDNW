@@ -170,3 +170,15 @@ footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; b
   .item-image, .item-image-placeholder { height: 180px; }
   .item-actions button, .item-actions a { flex: 1 1 100%; }
 }
+/* Hiệu ứng con trỏ tay cho Tiêu đề & Ảnh có thể click */
+.clickable-title {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.clickable-title:hover {
+  color: #4facfe;
+  text-decoration: underline;
+}
+.clickable-image {
+  cursor: pointer;
+}
