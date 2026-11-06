@@ -90,7 +90,6 @@ function getCurrentList() { return currentTab === 'stories' ? data.stories : dat
 function render() {
   let list = getCurrentList();
   
-  // 1. Lọc
   let filtered = list.filter(item => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -110,7 +109,6 @@ function render() {
     return true;
   });
 
-  // 2. Sắp xếp
   filtered.sort((a, b) => {
     if (a.isFavorite && !b.isFavorite) return -1;
     if (!a.isFavorite && b.isFavorite) return 1;
@@ -136,8 +134,6 @@ function render() {
 
   container.innerHTML = filtered.map(item => {
     const tags = (item.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-    
-    // Đặt hành động mặc định khi bấm vào Tiêu đề / Ảnh bìa
     const actionType = isStory ? 'read' : 'open';
     
     const imageHtml = item.image
@@ -484,7 +480,6 @@ function openReaderModal(id, chapterIndex = 0) {
   const story = data.stories.find(s => s.id === id);
   if (!story) return;
 
-  // Nếu truyện chưa có chương nào -> Tự động gợi ý mở bảng Thêm Chương
   if (!story.chapters || story.chapters.length === 0) {
     if (confirm(`Truyện "${story.title}" chưa có chương nào.\n\nBạn có muốn mở bảng Thêm & Quản lý chương ngay không?`)) {
       openChapterModal(id);
@@ -652,7 +647,6 @@ function init() {
   document.getElementById('advancedFilter').addEventListener('change', handleFilterChange);
   document.getElementById('clearFilterBtn').addEventListener('click', clearFilters);
 
-  // LẮNG NGHE SỰ KIỆN CLICK TRÊN CẢ NÚT, TIÊU ĐỀ VÀ ẢNH BÌA
   document.getElementById('itemsList').addEventListener('click', (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
