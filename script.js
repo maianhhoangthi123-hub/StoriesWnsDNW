@@ -14,13 +14,19 @@ let uploadedImageBase64 = '';
 let sortBy = 'newest'; 
 let filterFavorites = false; 
 
+// State Quản lý chương & Đọc truyện
+let currentStoryIdForChapters = null;
+let chapterEditingIndex = -1;
+let currentReaderStory = null;
+let currentReaderChapterIndex = 0;
+
 // ===== LOAD / SAVE / BACKUP =====
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      data.stories = parsed.stories || [];
+      data.stories = (parsed.stories || []).map(s => ({ ...s, chapters: s.chapters || [] }));
       data.games = parsed.games || [];
     }
     const histRaw = localStorage.getItem(HISTORY_KEY);
@@ -32,7 +38,7 @@ function saveData() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     localStorage.setItem(HISTORY_KEY, JSON.stringify(historyData));
-  } catch (e) { alert('Bộ nhớ đầy! Không thể lưu thêm dữ liệu hoặc ảnh quá lớn.'); }
+  } catch (e) { alert('Bộ nhớ đầy! Không thể lưu thêm dữ liệu hoặc ảnh/nội dung quá lớn.'); }
 }
 
 function exportData() {
@@ -58,7 +64,7 @@ function importData(e) {
     try {
       const parsed = JSON.parse(evt.target.result);
       if (parsed.stories && parsed.games) {
-        data.stories = parsed.stories;
+        data.stories = (parsed.stories || []).map(s => ({ ...s, chapters: s.chapters || [] }));
         data.games = parsed.games;
         if (parsed.history) historyData = parsed.history;
         saveData();
@@ -134,7 +140,9 @@ function render() {
       ? `<img src="${escapeHtml(item.image)}" class="item-image" onerror="this.outerHTML='<div class=\\'item-image-placeholder\\'>${placeholder}</div>'">`
       : `<div class="item-image-placeholder">${placeholder}</div>`;
 
-    const openBtn = item.link ? `<button class="btn-open" data-action="open" data-id="${item.id}">🔗 Mở</button>` : '';
+    const openBtn = item.link ? `<button class="btn-open" data-action="open" data-id="${item.id}">🔗 Mở link</button>` : '';
+    const chapterBtn = isStory ? `<button class="btn-secondary" data-action="chapters" data-id="${item.id}">📜 Chương (${(item.chapters || []).length})</button>` : '';
+    const readBtn = isStory ? `<button class="btn-primary" data-action="read" data-id="${item.id}">📖 Đọc</button>` : '';
     const favClass = item.isFavorite ? 'active' : '';
 
     return `
@@ -148,6 +156,8 @@ function render() {
           ${tags ? `<div class="item-tags">${tags}</div>` : ''}
         </div>
         <div class="item-actions">
+          ${isStory ? readBtn : ''}
+          ${isStory ? chapterBtn : ''}
           ${openBtn}
           <button class="btn-edit" data-action="edit" data-id="${item.id}">✏️ Sửa</button>
           <button class="btn-delete" data-action="delete" data-id="${item.id}">🗑️ Xóa</button>
@@ -261,6 +271,7 @@ function handleSubmit(e) {
 
   const imageUrl = document.getElementById('image').value.trim();
   const finalImage = uploadedImageBase64 || imageUrl;
+  const existingItem = editingId ? getCurrentList().find(i => i.id === editingId) : null;
 
   const item = {
     id: editingId || generateId(),
@@ -270,8 +281,9 @@ function handleSubmit(e) {
     link: document.getElementById('link').value.trim(),
     image: finalImage,
     tags: document.getElementById('tags').value.split(',').map(t => t.trim()).filter(Boolean),
-    isFavorite: editingId ? (getCurrentList().find(i => i.id === editingId)?.isFavorite || false) : false,
-    createdAt: editingId ? (getCurrentList().find(i => i.id === editingId)?.createdAt || Date.now()) : Date.now(),
+    chapters: existingItem ? (existingItem.chapters || []) : [],
+    isFavorite: existingItem ? (existingItem.isFavorite || false) : false,
+    createdAt: existingItem ? (existingItem.createdAt || Date.now()) : Date.now(),
     updatedAt: Date.now()
   };
 
@@ -353,36 +365,245 @@ function clearFilters() {
   render();
 }
 
+// ===== QUẢN LÝ CHƯƠNG =====
+function openChapterModal(id) {
+  const story = data.stories.find(s => s.id === id);
+  if (!story) return;
+  currentStoryIdForChapters = id;
+  if (!story.chapters) story.chapters = [];
+  
+  document.getElementById('chapterStoryId').value = id;
+  document.getElementById('chapterModalTitle').textContent = `📜 Quản lý chương: ${story.title}`;
+  resetChapterForm();
+  renderChapterList();
+  document.getElementById('chapterModal').style.display = 'flex';
+}
+
+function closeChapterModal() {
+  document.getElementById('chapterModal').style.display = 'none';
+  currentStoryIdForChapters = null;
+  resetChapterForm();
+}
+
+function resetChapterForm() {
+  document.getElementById('chapterForm').reset();
+  document.getElementById('chapterEditIndex').value = '-1';
+  chapterEditingIndex = -1;
+  document.getElementById('chapterFormTitle').textContent = '➕ Thêm chương mới';
+  document.getElementById('saveChapterBtn').textContent = 'Lưu chương';
+  document.getElementById('cancelChapterEditBtn').style.display = 'none';
+}
+
+function handleChapterSubmit(e) {
+  e.preventDefault();
+  if (!currentStoryIdForChapters) return;
+  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
+  if (!story) return;
+
+  const title = document.getElementById('chapterTitleInput').value.trim();
+  const link = document.getElementById('chapterLinkInput').value.trim();
+  const content = document.getElementById('chapterContentInput').value.trim();
+
+  if (!title) { alert('Vui lòng nhập tên chương!'); return; }
+  if (!story.chapters) story.chapters = [];
+
+  const chapterObj = { title, link, content };
+
+  if (chapterEditingIndex >= 0 && chapterEditingIndex < story.chapters.length) {
+    story.chapters[chapterEditingIndex] = chapterObj;
+  } else {
+    story.chapters.push(chapterObj);
+  }
+
+  saveData();
+  resetChapterForm();
+  renderChapterList();
+  render();
+}
+
+function editChapter(index) {
+  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
+  if (!story || !story.chapters || !story.chapters[index]) return;
+  const ch = story.chapters[index];
+
+  chapterEditingIndex = index;
+  document.getElementById('chapterEditIndex').value = index;
+  document.getElementById('chapterTitleInput').value = ch.title || '';
+  document.getElementById('chapterLinkInput').value = ch.link || '';
+  document.getElementById('chapterContentInput').value = ch.content || '';
+
+  document.getElementById('chapterFormTitle').textContent = `✏️ Chỉnh sửa: ${ch.title}`;
+  document.getElementById('saveChapterBtn').textContent = '💾 Cập nhật';
+  document.getElementById('cancelChapterEditBtn').style.display = 'inline-block';
+}
+
+function deleteChapter(index) {
+  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
+  if (!story || !story.chapters || !story.chapters[index]) return;
+  if (!confirm(`Xóa chương "${story.chapters[index].title}"?`)) return;
+
+  story.chapters.splice(index, 1);
+  saveData();
+  resetChapterForm();
+  renderChapterList();
+  render();
+}
+
+function renderChapterList() {
+  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
+  const container = document.getElementById('chapterListContainer');
+  if (!story || !story.chapters || story.chapters.length === 0) {
+    container.innerHTML = '<p style="color: #888; font-style: italic;">Chưa có chương nào. Hãy điền form trên để thêm chương mới!</p>';
+    return;
+  }
+
+  container.innerHTML = story.chapters.map((ch, idx) => `
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.08); padding: 0.6rem 0.8rem; border-radius: 6px;">
+      <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px;">
+        <strong>#${idx + 1}. ${escapeHtml(ch.title)}</strong>
+        ${ch.link ? `<small style="color: #4facfe; margin-left: 6px;">(Link online)</small>` : ''}
+        ${ch.content ? `<small style="color: #6cf; margin-left: 6px;">(Văn bản)</small>` : ''}
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <button type="button" class="btn-secondary" onclick="editChapter(${idx})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">✏️ Sửa</button>
+        <button type="button" class="btn-delete" onclick="deleteChapter(${idx})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">🗑️ Xóa</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Đưa hàm vào window để gọi từ onclick HTML động
+window.editChapter = editChapter;
+window.deleteChapter = deleteChapter;
+
+// ===== TRÌNH ĐỌC TRUYỆN (CÓ TIẾN / LÙI) =====
+function openReaderModal(id, chapterIndex = 0) {
+  const story = data.stories.find(s => s.id === id);
+  if (!story) return;
+
+  if (!story.chapters || story.chapters.length === 0) {
+    if (story.link) {
+      openItemModal(id);
+    } else {
+      alert('Truyện này chưa có chương nào! Bấm nút "📜 Chương" để bắt đầu thêm chương mới.');
+    }
+    return;
+  }
+
+  currentReaderStory = story;
+  currentReaderChapterIndex = Math.max(0, Math.min(chapterIndex, story.chapters.length - 1));
+  
+  renderReaderUI();
+  document.getElementById('readerModal').style.display = 'flex';
+}
+
+function closeReaderModal() {
+  document.getElementById('readerModal').style.display = 'none';
+  currentReaderStory = null;
+}
+
+function goToChapter(index) {
+  if (!currentReaderStory || !currentReaderStory.chapters) return;
+  if (index < 0 || index >= currentReaderStory.chapters.length) return;
+
+  currentReaderChapterIndex = index;
+  renderReaderUI();
+}
+
+function renderReaderUI() {
+  if (!currentReaderStory || !currentReaderStory.chapters) return;
+  const chapters = currentReaderStory.chapters;
+  const ch = chapters[currentReaderChapterIndex];
+  if (!ch) return;
+
+  document.getElementById('readerStoryTitle').textContent = currentReaderStory.title;
+  document.getElementById('readerChapterTitle').textContent = ch.title;
+
+  // Dropdown chuyển chương
+  const select = document.getElementById('readerChapterSelect');
+  select.innerHTML = chapters.map((c, idx) => `
+    <option value="${idx}" ${idx === currentReaderChapterIndex ? 'selected' : ''}>
+      ${idx + 1}. ${escapeHtml(c.title)}
+    </option>
+  `).join('');
+
+  // Hiển thị nội dung
+  const readerBody = document.getElementById('readerBody');
+  if (ch.content) {
+    readerBody.innerHTML = escapeHtml(ch.content);
+  } else if (ch.link) {
+    readerBody.innerHTML = `
+      <div style="text-align: center; padding: 2rem;">
+        <p style="margin-bottom: 1rem; color: #ccc;">Chương này đọc trực tiếp tại trang gốc:</p>
+        <a href="${escapeHtml(ch.link)}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-block; padding: 0.8rem 1.5rem; font-size: 1.1rem; text-decoration: none;">🔗 Mở link đọc "${escapeHtml(ch.title)}"</a>
+      </div>
+    `;
+  } else {
+    readerBody.innerHTML = '<p style="color: #888; font-style: italic; text-align: center;">Chương này chưa có nội dung văn bản hoặc liên kết web.</p>';
+  }
+
+  readerBody.scrollTop = 0;
+
+  // Trạng thái nút Tiến / Lùi
+  const hasPrev = currentReaderChapterIndex > 0;
+  const hasNext = currentReaderChapterIndex < chapters.length - 1;
+
+  document.getElementById('prevChapterBtn').disabled = !hasPrev;
+  document.getElementById('nextChapterBtn').disabled = !hasNext;
+  document.getElementById('prevChapterBtnBottom').disabled = !hasPrev;
+  document.getElementById('nextChapterBtnBottom').disabled = !hasNext;
+
+  document.getElementById('prevChapterBtn').style.opacity = hasPrev ? '1' : '0.4';
+  document.getElementById('nextChapterBtn').style.opacity = hasNext ? '1' : '0.4';
+  document.getElementById('prevChapterBtnBottom').style.opacity = hasPrev ? '1' : '0.4';
+  document.getElementById('nextChapterBtnBottom').style.opacity = hasNext ? '1' : '0.4';
+
+  // Tự động ghi lại lịch sử đọc
+  saveReaderHistory(currentReaderStory, ch.title);
+}
+
+function saveReaderHistory(story, chapterTitle) {
+  const existingIdx = historyData.findIndex(h => h.itemId === story.id);
+  const newHist = {
+    id: generateId(),
+    itemId: story.id,
+    title: story.title,
+    image: story.image,
+    link: story.link || '#',
+    type: 'story',
+    progress: chapterTitle,
+    lastReadAt: Date.now()
+  };
+  if (existingIdx !== -1) {
+    historyData[existingIdx] = { ...historyData[existingIdx], ...newHist, id: historyData[existingIdx].id };
+  } else {
+    historyData.push(newHist);
+  }
+  saveData();
+  renderHistory();
+}
+
 // ===== HIỆU ỨNG GỢN SÓNG (RIPPLE) =====
 function initRippleEffect() {
-  // Lắng nghe sự kiện click trên toàn bộ trang web (áp dụng cho cả nút mới tạo)
   document.addEventListener('click', function(e) {
-    // Tìm xem người dùng có click vào nút (button) hoặc thẻ link (a) nào không
     const target = e.target.closest('button, .btn-open, .btn-continue');
     if (!target) return;
 
-    // Tính toán vị trí click chuột so với nút
     const rect = target.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Tạo thẻ span cho hiệu ứng sóng
     const ripple = document.createElement('span');
     ripple.classList.add('ripple');
     ripple.style.left = `${x}px`;
     ripple.style.top = `${y}px`;
 
-    // Tính kích thước lớn nhất của nút để làm kích thước sóng
     const size = Math.max(rect.width, rect.height);
     ripple.style.width = ripple.style.height = `${size}px`;
-    
-    // Căn giữa vị trí sóng
     ripple.style.transform = `translate(-50%, -50%) scale(0)`;
 
-    // Gắn sóng vào nút
     target.appendChild(ripple);
 
-    // Xóa thẻ span sau khi hiệu ứng chạy xong
     setTimeout(() => {
       ripple.remove();
     }, 600);
@@ -395,7 +616,7 @@ function init() {
   updateTitles();
   render();
   renderHistory();
-  initRippleEffect(); // Kích hoạt hiệu ứng gợn sóng
+  initRippleEffect();
 
   // Form & Backup
   document.getElementById('addForm').addEventListener('submit', handleSubmit);
@@ -404,7 +625,7 @@ function init() {
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', importData);
 
-  // Xử lý Upload Ảnh
+  // Upload Ảnh
   document.getElementById('imageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -435,7 +656,7 @@ function init() {
   document.getElementById('advancedFilter').addEventListener('change', handleFilterChange);
   document.getElementById('clearFilterBtn').addEventListener('click', clearFilters);
 
-  // Danh sách (Event Delegation)
+  // Sự kiện nút trong danh sách truyện/game
   document.getElementById('itemsList').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
@@ -444,12 +665,27 @@ function init() {
     if (btn.dataset.action === 'delete') deleteItem(id);
     if (btn.dataset.action === 'open') openItemModal(id);
     if (btn.dataset.action === 'fav') toggleFavorite(id);
+    if (btn.dataset.action === 'chapters') openChapterModal(id);
+    if (btn.dataset.action === 'read') openReaderModal(id);
   });
 
-  // Modal
+  // Modal Lưu tiến trình cũ
   document.getElementById('cancelProgressBtn').addEventListener('click', closeModal);
   document.getElementById('saveProgressBtn').addEventListener('click', saveProgressAndOpen);
   document.getElementById('progressInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') saveProgressAndOpen(); });
+
+  // Modal Quản lý chương
+  document.getElementById('closeChapterModalBtn').addEventListener('click', closeChapterModal);
+  document.getElementById('chapterForm').addEventListener('submit', handleChapterSubmit);
+  document.getElementById('cancelChapterEditBtn').addEventListener('click', resetChapterForm);
+
+  // Modal Trình đọc truyện (Tiến / Lùi)
+  document.getElementById('closeReaderBtn').addEventListener('click', closeReaderModal);
+  document.getElementById('prevChapterBtn').addEventListener('click', () => goToChapter(currentReaderChapterIndex - 1));
+  document.getElementById('nextChapterBtn').addEventListener('click', () => goToChapter(currentReaderChapterIndex + 1));
+  document.getElementById('prevChapterBtnBottom').addEventListener('click', () => goToChapter(currentReaderChapterIndex - 1));
+  document.getElementById('nextChapterBtnBottom').addEventListener('click', () => goToChapter(currentReaderChapterIndex + 1));
+  document.getElementById('readerChapterSelect').addEventListener('change', (e) => goToChapter(parseInt(e.target.value, 10)));
 
   // Lịch sử
   document.getElementById('clearHistoryBtn').addEventListener('click', () => {
