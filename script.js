@@ -14,11 +14,21 @@ let uploadedImageBase64 = '';
 let sortBy = 'newest'; 
 let filterFavorites = false; 
 
-// State Quản lý chương & Đọc truyện
-let currentStoryIdForChapters = null;
+// State Quản lý View, Chương & Đọc truyện
+let currentView = 'home'; // 'home' | 'detail' | 'reader'
+let activeStoryId = null;
+let activeChapterIndex = 0;
 let chapterEditingIndex = -1;
-let currentReaderStory = null;
-let currentReaderChapterIndex = 0;
+
+// ===== CHUYỂN ĐỔI VIEW (PAGES) =====
+function showView(viewName) {
+  currentView = viewName;
+  document.getElementById('viewHome').style.display = viewName === 'home' ? 'block' : 'none';
+  document.getElementById('viewDetail').style.display = viewName === 'detail' ? 'block' : 'none';
+  document.getElementById('viewReader').style.display = viewName === 'reader' ? 'block' : 'none';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 // ===== LOAD / SAVE / BACKUP =====
 function loadData() {
@@ -70,6 +80,7 @@ function importData(e) {
         saveData();
         render();
         renderHistory();
+        showView('home');
         alert('Phục hồi dữ liệu thành công!');
       } else { alert('File không đúng định dạng!'); }
     } catch (err) { alert('Lỗi đọc file JSON!'); }
@@ -86,7 +97,7 @@ function escapeHtml(str) {
 }
 function getCurrentList() { return currentTab === 'stories' ? data.stories : data.games; }
 
-// ===== RENDER CHÍNH =====
+// ===== RENDER TRANG CHỦ =====
 function render() {
   let list = getCurrentList();
   
@@ -134,15 +145,16 @@ function render() {
 
   container.innerHTML = filtered.map(item => {
     const tags = (item.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-    const actionType = isStory ? 'read' : 'open';
+    const actionType = isStory ? 'view-detail' : 'open';
     
     const imageHtml = item.image
-      ? `<img src="${escapeHtml(item.image)}" class="item-image clickable-image" data-action="${actionType}" data-id="${item.id}" onerror="this.outerHTML='<div class=\\'item-image-placeholder clickable-image\\' data-action=\\'${actionType}\\' data-id=\\'${item.id}\\'>${placeholder}</div>'">`
-      : `<div class="item-image-placeholder clickable-image" data-action="${actionType}" data-id="${item.id}">${placeholder}</div>`;
+      ? `<img src="${escapeHtml(item.image)}" class="item-image" data-action="${actionType}" data-id="${item.id}" onerror="this.outerHTML='<div class=\\'item-image-placeholder\\' data-action=\\'${actionType}\\' data-id=\\'${item.id}\\'>${placeholder}</div>'">`
+      : `<div class="item-image-placeholder" data-action="${actionType}" data-id="${item.id}">${placeholder}</div>`;
 
-    const openBtn = item.link ? `<button class="btn-open" data-action="open" data-id="${item.id}">🔗 Mở link</button>` : '';
-    const chapterBtn = isStory ? `<button class="btn-secondary" data-action="chapters" data-id="${item.id}">📜 Chương (${(item.chapters || []).length})</button>` : '';
-    const readBtn = isStory ? `<button class="btn-primary" data-action="read" data-id="${item.id}">📖 Đọc</button>` : '';
+    const openBtn = item.link ? `<button class="btn-open" data-action="open" data-id="${item.id}">🔗 Link web</button>` : '';
+    const mainActionBtn = isStory 
+      ? `<button class="btn-primary" data-action="view-detail" data-id="${item.id}">📖 Xem chương (${(item.chapters || []).length})</button>`
+      : openBtn;
     const favClass = item.isFavorite ? 'active' : '';
 
     return `
@@ -150,15 +162,14 @@ function render() {
         <button class="btn-fav ${favClass}" data-action="fav" data-id="${item.id}">⭐</button>
         ${imageHtml}
         <div class="item-body">
-          <div class="item-title clickable-title" data-action="${actionType}" data-id="${item.id}" title="Bấm để đọc truyện">${escapeHtml(item.title)}</div>
+          <div class="item-title" data-action="${actionType}" data-id="${item.id}" title="Bấm để xem chi tiết">${escapeHtml(item.title)}</div>
           ${item.author ? `<div class="item-author">✍️ ${escapeHtml(item.author)}</div>` : ''}
           ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ''}
           ${tags ? `<div class="item-tags">${tags}</div>` : ''}
         </div>
         <div class="item-actions">
-          ${isStory ? readBtn : ''}
-          ${isStory ? chapterBtn : ''}
-          ${openBtn}
+          ${mainActionBtn}
+          ${isStory && item.link ? openBtn : ''}
           <button class="btn-edit" data-action="edit" data-id="${item.id}">✏️ Sửa</button>
           <button class="btn-delete" data-action="delete" data-id="${item.id}">🗑️ Xóa</button>
         </div>
@@ -186,6 +197,10 @@ function renderHistory() {
       ? `<img src="${escapeHtml(hist.image)}" class="item-image" onerror="this.outerHTML='<div class=\\'item-image-placeholder\\'>${placeholder}</div>'">`
       : `<div class="item-image-placeholder">${placeholder}</div>`;
 
+    const actionMarkup = isStory
+      ? `<button type="button" class="btn-continue" onclick="openStoryDetail('${hist.itemId}')">▶ Đọc tiếp</button>`
+      : `<a href="${escapeHtml(hist.link)}" target="_blank" rel="noopener" class="btn-continue">▶ Chơi tiếp</a>`;
+
     return `
       <div class="item-card">
         ${imageHtml}
@@ -196,7 +211,7 @@ function renderHistory() {
           <div class="item-desc" style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">Lưu lúc: ${new Date(hist.lastReadAt).toLocaleString('vi-VN')}</div>
         </div>
         <div class="item-actions">
-          <a href="${escapeHtml(hist.link)}" target="_blank" rel="noopener" class="btn-continue">▶ Đọc/Chơi tiếp</a>
+          ${actionMarkup}
           <button class="btn-delete" data-action="delete-hist" data-id="${hist.id}">🗑️</button>
         </div>
       </div>
@@ -204,7 +219,246 @@ function renderHistory() {
   }).join('');
 }
 
-// ===== CÁC HÀM XỬ LÝ =====
+// ===== TRANG CHI TIẾT TRUYỆN (STORY DETAIL VIEW) =====
+function openStoryDetail(id) {
+  const story = data.stories.find(s => s.id === id);
+  if (!story) return;
+
+  activeStoryId = id;
+  document.getElementById('chapterStoryId').value = id;
+
+  const coverBox = document.getElementById('detailCoverContainer');
+  coverBox.innerHTML = story.image
+    ? `<img src="${escapeHtml(story.image)}" onerror="this.outerHTML='<div class=\\'item-image-placeholder\\'>📖</div>'">`
+    : `<div class="item-image-placeholder" style="height:100%;">📖</div>`;
+
+  document.getElementById('detailTitle').textContent = story.title;
+  document.getElementById('detailAuthor').textContent = story.author ? `✍️ Tác giả: ${story.author}` : '';
+  document.getElementById('detailDesc').textContent = story.description || 'Chưa có mô tả.';
+  
+  const tagsContainer = document.getElementById('detailTags');
+  tagsContainer.innerHTML = (story.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+
+  const extLinkBtn = document.getElementById('openExternalLinkBtn');
+  if (story.link) {
+    extLinkBtn.style.display = 'inline-block';
+    extLinkBtn.onclick = () => window.open(story.link, '_blank');
+  } else {
+    extLinkBtn.style.display = 'none';
+  }
+
+  document.getElementById('startReadingBtn').onclick = () => {
+    if (story.chapters && story.chapters.length > 0) {
+      openReader(id, 0);
+    } else {
+      alert('Truyện này chưa có chương nào! Hãy bấm "➕ Thêm chương mới" để bổ sung.');
+      toggleChapterForm(true);
+    }
+  };
+
+  document.getElementById('editStoryBtn').onclick = () => {
+    showView('home');
+    editItem(id);
+  };
+
+  resetChapterForm();
+  renderChapterGrid();
+  showView('detail');
+}
+
+function renderChapterGrid() {
+  const story = data.stories.find(s => s.id === activeStoryId);
+  const container = document.getElementById('detailChapterList');
+  const emptyMsg = document.getElementById('emptyChapterMsg');
+
+  if (!story || !story.chapters || story.chapters.length === 0) {
+    container.innerHTML = '';
+    emptyMsg.style.display = 'block';
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+  container.innerHTML = story.chapters.map((ch, idx) => `
+    <div class="chapter-item-card">
+      <button type="button" class="chapter-name-btn" onclick="openReader('${story.id}', ${idx})" title="Bấm để đọc chương này">
+        📖 #${idx + 1}. ${escapeHtml(ch.title)}
+      </button>
+      <div style="display: flex; gap: 4px;">
+        <button type="button" class="btn-secondary" onclick="editChapter(${idx})" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">✏️ Sửa</button>
+        <button type="button" class="btn-delete" onclick="deleteChapter(${idx})" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleChapterForm(forceShow = false) {
+  const form = document.getElementById('chapterForm');
+  if (forceShow) form.style.display = 'block';
+  else form.style.display = form.style.display === 'none' ? 'block' : 'none';
+
+  if (form.style.display === 'block') {
+    document.getElementById('chapterTitleInput').focus();
+  }
+}
+
+function resetChapterForm() {
+  document.getElementById('chapterForm').reset();
+  document.getElementById('chapterEditIndex').value = '-1';
+  chapterEditingIndex = -1;
+  document.getElementById('chapterFormTitle').textContent = '➕ Thêm chương mới';
+  document.getElementById('saveChapterBtn').textContent = '💾 Lưu chương';
+  document.getElementById('cancelChapterEditBtn').style.display = 'none';
+  document.getElementById('chapterForm').style.display = 'none';
+}
+
+function handleChapterSubmit(e) {
+  e.preventDefault();
+  if (!activeStoryId) return;
+  const story = data.stories.find(s => s.id === activeStoryId);
+  if (!story) return;
+
+  const title = document.getElementById('chapterTitleInput').value.trim();
+  const link = document.getElementById('chapterLinkInput').value.trim();
+  const content = document.getElementById('chapterContentInput').value.trim();
+
+  if (!title) { alert('Vui lòng nhập tên chương!'); return; }
+  if (!story.chapters) story.chapters = [];
+
+  const chapterObj = { title, link, content };
+
+  if (chapterEditingIndex >= 0 && chapterEditingIndex < story.chapters.length) {
+    story.chapters[chapterEditingIndex] = chapterObj;
+  } else {
+    story.chapters.push(chapterObj);
+  }
+
+  saveData();
+  resetChapterForm();
+  renderChapterGrid();
+  render();
+}
+
+function editChapter(index) {
+  const story = data.stories.find(s => s.id === activeStoryId);
+  if (!story || !story.chapters || !story.chapters[index]) return;
+  const ch = story.chapters[index];
+
+  chapterEditingIndex = index;
+  document.getElementById('chapterEditIndex').value = index;
+  document.getElementById('chapterTitleInput').value = ch.title || '';
+  document.getElementById('chapterLinkInput').value = ch.link || '';
+  document.getElementById('chapterContentInput').value = ch.content || '';
+
+  document.getElementById('chapterFormTitle').textContent = `✏️ Chỉnh sửa: ${ch.title}`;
+  document.getElementById('saveChapterBtn').textContent = '💾 Cập nhật';
+  document.getElementById('cancelChapterEditBtn').style.display = 'inline-block';
+  toggleChapterForm(true);
+}
+
+function deleteChapter(index) {
+  const story = data.stories.find(s => s.id === activeStoryId);
+  if (!story || !story.chapters || !story.chapters[index]) return;
+  if (!confirm(`Xóa chương "${story.chapters[index].title}"?`)) return;
+
+  story.chapters.splice(index, 1);
+  saveData();
+  resetChapterForm();
+  renderChapterGrid();
+  render();
+}
+
+window.openStoryDetail = openStoryDetail;
+window.openReader = openReader;
+window.editChapter = editChapter;
+window.deleteChapter = deleteChapter;
+
+// ===== TRANG ĐỌC CHƯƠNG (FULL READER VIEW) =====
+function openReader(storyId, chapterIndex = 0) {
+  const story = data.stories.find(s => s.id === storyId);
+  if (!story || !story.chapters || story.chapters.length === 0) return;
+
+  activeStoryId = storyId;
+  activeChapterIndex = Math.max(0, Math.min(chapterIndex, story.chapters.length - 1));
+
+  renderReaderContent();
+  showView('reader');
+}
+
+function goToChapter(index) {
+  const story = data.stories.find(s => s.id === activeStoryId);
+  if (!story || !story.chapters) return;
+  if (index < 0 || index >= story.chapters.length) return;
+
+  activeChapterIndex = index;
+  renderReaderContent();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderReaderContent() {
+  const story = data.stories.find(s => s.id === activeStoryId);
+  if (!story || !story.chapters) return;
+
+  const chapters = story.chapters;
+  const ch = chapters[activeChapterIndex];
+  if (!ch) return;
+
+  document.getElementById('readerStoryTitle').textContent = story.title;
+  document.getElementById('readerChapterTitle').textContent = ch.title;
+
+  const select = document.getElementById('readerChapterSelect');
+  select.innerHTML = chapters.map((c, idx) => `
+    <option value="${idx}" ${idx === activeChapterIndex ? 'selected' : ''}>
+      ${idx + 1}. ${escapeHtml(c.title)}
+    </option>
+  `).join('');
+
+  const readerBody = document.getElementById('readerBody');
+  if (ch.content) {
+    readerBody.innerHTML = escapeHtml(ch.content);
+  } else if (ch.link) {
+    readerBody.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1rem;">
+        <p style="margin-bottom: 1.2rem; color: #ccc;">Chương này được lưu dưới dạng liên kết web:</p>
+        <a href="${escapeHtml(ch.link)}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-block; padding: 0.8rem 1.8rem; font-size: 1.1rem; text-decoration: none;">🔗 Bấm vào đây để mở bài đọc gốc "${escapeHtml(ch.title)}"</a>
+      </div>
+    `;
+  } else {
+    readerBody.innerHTML = '<p style="color: #888; font-style: italic; text-align: center; padding: 3rem 0;">Chương này chưa có nội dung văn bản.</p>';
+  }
+
+  const hasPrev = activeChapterIndex > 0;
+  const hasNext = activeChapterIndex < chapters.length - 1;
+
+  document.getElementById('prevChapterBtn').disabled = !hasPrev;
+  document.getElementById('nextChapterBtn').disabled = !hasNext;
+  document.getElementById('prevChapterBtnBottom').disabled = !hasPrev;
+  document.getElementById('nextChapterBtnBottom').disabled = !hasNext;
+
+  saveReaderHistory(story, ch.title);
+}
+
+function saveReaderHistory(story, chapterTitle) {
+  const existingIdx = historyData.findIndex(h => h.itemId === story.id);
+  const newHist = {
+    id: generateId(),
+    itemId: story.id,
+    title: story.title,
+    image: story.image,
+    link: story.link || '#',
+    type: 'story',
+    progress: chapterTitle,
+    lastReadAt: Date.now()
+  };
+  if (existingIdx !== -1) {
+    historyData[existingIdx] = { ...historyData[existingIdx], ...newHist, id: historyData[existingIdx].id };
+  } else {
+    historyData.push(newHist);
+  }
+  saveData();
+  renderHistory();
+}
+
+// ===== XỬ LÝ FORM & BỘ LỌC HOẠT ĐỘNG =====
 function toggleFavorite(id) {
   const list = getCurrentList();
   const item = list.find(i => i.id === id);
@@ -221,7 +475,7 @@ function openItemModal(id) {
   currentProgressItem = item;
   const existingHist = historyData.find(h => h.itemId === item.id);
   document.getElementById('modalTitle').textContent = `Mở: ${item.title}`;
-  document.getElementById('modalDesc').textContent = currentTab === 'stories' ? 'Bạn đang đọc đến chương nào?' : 'Bạn đang chơi đến level nào?';
+  document.getElementById('modalDesc').textContent = 'Bạn đang chơi đến level/tiến trình nào?';
   document.getElementById('progressInput').value = existingHist ? existingHist.progress : '';
   document.getElementById('historyModal').style.display = 'flex';
   document.getElementById('progressInput').focus();
@@ -232,7 +486,7 @@ function saveProgressAndOpen() {
   const progress = document.getElementById('progressInput').value.trim();
   if (progress) {
     const existingIdx = historyData.findIndex(h => h.itemId === currentProgressItem.id);
-    const newHist = { id: generateId(), itemId: currentProgressItem.id, title: currentProgressItem.title, image: currentProgressItem.image, link: currentProgressItem.link, type: currentTab === 'stories' ? 'story' : 'game', progress: progress, lastReadAt: Date.now() };
+    const newHist = { id: generateId(), itemId: currentProgressItem.id, title: currentProgressItem.title, image: currentProgressItem.image, link: currentProgressItem.link, type: 'game', progress: progress, lastReadAt: Date.now() };
     if (existingIdx !== -1) historyData[existingIdx] = { ...historyData[existingIdx], ...newHist, id: historyData[existingIdx].id };
     else historyData.push(newHist);
     saveData();
@@ -365,219 +619,6 @@ function clearFilters() {
   render();
 }
 
-// ===== QUẢN LÝ CHƯƠNG =====
-function openChapterModal(id) {
-  const story = data.stories.find(s => s.id === id);
-  if (!story) return;
-  currentStoryIdForChapters = id;
-  if (!story.chapters) story.chapters = [];
-  
-  document.getElementById('chapterStoryId').value = id;
-  document.getElementById('chapterModalTitle').textContent = `📜 Quản lý chương: ${story.title}`;
-  resetChapterForm();
-  renderChapterList();
-  document.getElementById('chapterModal').style.display = 'flex';
-}
-
-function closeChapterModal() {
-  document.getElementById('chapterModal').style.display = 'none';
-  currentStoryIdForChapters = null;
-  resetChapterForm();
-}
-
-function resetChapterForm() {
-  document.getElementById('chapterForm').reset();
-  document.getElementById('chapterEditIndex').value = '-1';
-  chapterEditingIndex = -1;
-  document.getElementById('chapterFormTitle').textContent = '➕ Thêm chương mới';
-  document.getElementById('saveChapterBtn').textContent = 'Lưu chương';
-  document.getElementById('cancelChapterEditBtn').style.display = 'none';
-}
-
-function handleChapterSubmit(e) {
-  e.preventDefault();
-  if (!currentStoryIdForChapters) return;
-  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
-  if (!story) return;
-
-  const title = document.getElementById('chapterTitleInput').value.trim();
-  const link = document.getElementById('chapterLinkInput').value.trim();
-  const content = document.getElementById('chapterContentInput').value.trim();
-
-  if (!title) { alert('Vui lòng nhập tên chương!'); return; }
-  if (!story.chapters) story.chapters = [];
-
-  const chapterObj = { title, link, content };
-
-  if (chapterEditingIndex >= 0 && chapterEditingIndex < story.chapters.length) {
-    story.chapters[chapterEditingIndex] = chapterObj;
-  } else {
-    story.chapters.push(chapterObj);
-  }
-
-  saveData();
-  resetChapterForm();
-  renderChapterList();
-  render();
-}
-
-function editChapter(index) {
-  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
-  if (!story || !story.chapters || !story.chapters[index]) return;
-  const ch = story.chapters[index];
-
-  chapterEditingIndex = index;
-  document.getElementById('chapterEditIndex').value = index;
-  document.getElementById('chapterTitleInput').value = ch.title || '';
-  document.getElementById('chapterLinkInput').value = ch.link || '';
-  document.getElementById('chapterContentInput').value = ch.content || '';
-
-  document.getElementById('chapterFormTitle').textContent = `✏️ Chỉnh sửa: ${ch.title}`;
-  document.getElementById('saveChapterBtn').textContent = '💾 Cập nhật';
-  document.getElementById('cancelChapterEditBtn').style.display = 'inline-block';
-}
-
-function deleteChapter(index) {
-  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
-  if (!story || !story.chapters || !story.chapters[index]) return;
-  if (!confirm(`Xóa chương "${story.chapters[index].title}"?`)) return;
-
-  story.chapters.splice(index, 1);
-  saveData();
-  resetChapterForm();
-  renderChapterList();
-  render();
-}
-
-function renderChapterList() {
-  const story = data.stories.find(s => s.id === currentStoryIdForChapters);
-  const container = document.getElementById('chapterListContainer');
-  if (!story || !story.chapters || story.chapters.length === 0) {
-    container.innerHTML = '<p style="color: #888; font-style: italic;">Chưa có chương nào. Hãy điền form trên để thêm chương mới!</p>';
-    return;
-  }
-
-  container.innerHTML = story.chapters.map((ch, idx) => `
-    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.08); padding: 0.6rem 0.8rem; border-radius: 6px;">
-      <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px;">
-        <strong>#${idx + 1}. ${escapeHtml(ch.title)}</strong>
-        ${ch.link ? `<small style="color: #4facfe; margin-left: 6px;">(Link online)</small>` : ''}
-        ${ch.content ? `<small style="color: #6cf; margin-left: 6px;">(Văn bản)</small>` : ''}
-      </div>
-      <div style="display: flex; gap: 5px;">
-        <button type="button" class="btn-secondary" onclick="editChapter(${idx})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">✏️ Sửa</button>
-        <button type="button" class="btn-delete" onclick="deleteChapter(${idx})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">🗑️ Xóa</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-window.editChapter = editChapter;
-window.deleteChapter = deleteChapter;
-
-// ===== TRÌNH ĐỌC TRUYỆN =====
-function openReaderModal(id, chapterIndex = 0) {
-  const story = data.stories.find(s => s.id === id);
-  if (!story) return;
-
-  if (!story.chapters || story.chapters.length === 0) {
-    if (confirm(`Truyện "${story.title}" chưa có chương nào.\n\nBạn có muốn mở bảng Thêm & Quản lý chương ngay không?`)) {
-      openChapterModal(id);
-    } else if (story.link) {
-      openItemModal(id);
-    }
-    return;
-  }
-
-  currentReaderStory = story;
-  currentReaderChapterIndex = Math.max(0, Math.min(chapterIndex, story.chapters.length - 1));
-  
-  renderReaderUI();
-  document.getElementById('readerModal').style.display = 'flex';
-}
-
-function closeReaderModal() {
-  document.getElementById('readerModal').style.display = 'none';
-  currentReaderStory = null;
-}
-
-function goToChapter(index) {
-  if (!currentReaderStory || !currentReaderStory.chapters) return;
-  if (index < 0 || index >= currentReaderStory.chapters.length) return;
-
-  currentReaderChapterIndex = index;
-  renderReaderUI();
-}
-
-function renderReaderUI() {
-  if (!currentReaderStory || !currentReaderStory.chapters) return;
-  const chapters = currentReaderStory.chapters;
-  const ch = chapters[currentReaderChapterIndex];
-  if (!ch) return;
-
-  document.getElementById('readerStoryTitle').textContent = currentReaderStory.title;
-  document.getElementById('readerChapterTitle').textContent = ch.title;
-
-  const select = document.getElementById('readerChapterSelect');
-  select.innerHTML = chapters.map((c, idx) => `
-    <option value="${idx}" ${idx === currentReaderChapterIndex ? 'selected' : ''}>
-      ${idx + 1}. ${escapeHtml(c.title)}
-    </option>
-  `).join('');
-
-  const readerBody = document.getElementById('readerBody');
-  if (ch.content) {
-    readerBody.innerHTML = escapeHtml(ch.content);
-  } else if (ch.link) {
-    readerBody.innerHTML = `
-      <div style="text-align: center; padding: 2rem;">
-        <p style="margin-bottom: 1rem; color: #ccc;">Chương này đọc trực tiếp tại trang gốc:</p>
-        <a href="${escapeHtml(ch.link)}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-block; padding: 0.8rem 1.5rem; font-size: 1.1rem; text-decoration: none;">🔗 Mở link đọc "${escapeHtml(ch.title)}"</a>
-      </div>
-    `;
-  } else {
-    readerBody.innerHTML = '<p style="color: #888; font-style: italic; text-align: center;">Chương này chưa có nội dung văn bản hoặc liên kết web.</p>';
-  }
-
-  readerBody.scrollTop = 0;
-
-  const hasPrev = currentReaderChapterIndex > 0;
-  const hasNext = currentReaderChapterIndex < chapters.length - 1;
-
-  document.getElementById('prevChapterBtn').disabled = !hasPrev;
-  document.getElementById('nextChapterBtn').disabled = !hasNext;
-  document.getElementById('prevChapterBtnBottom').disabled = !hasPrev;
-  document.getElementById('nextChapterBtnBottom').disabled = !hasNext;
-
-  document.getElementById('prevChapterBtn').style.opacity = hasPrev ? '1' : '0.4';
-  document.getElementById('nextChapterBtn').style.opacity = hasNext ? '1' : '0.4';
-  document.getElementById('prevChapterBtnBottom').style.opacity = hasPrev ? '1' : '0.4';
-  document.getElementById('nextChapterBtnBottom').style.opacity = hasNext ? '1' : '0.4';
-
-  saveReaderHistory(currentReaderStory, ch.title);
-}
-
-function saveReaderHistory(story, chapterTitle) {
-  const existingIdx = historyData.findIndex(h => h.itemId === story.id);
-  const newHist = {
-    id: generateId(),
-    itemId: story.id,
-    title: story.title,
-    image: story.image,
-    link: story.link || '#',
-    type: 'story',
-    progress: chapterTitle,
-    lastReadAt: Date.now()
-  };
-  if (existingIdx !== -1) {
-    historyData[existingIdx] = { ...historyData[existingIdx], ...newHist, id: historyData[existingIdx].id };
-  } else {
-    historyData.push(newHist);
-  }
-  saveData();
-  renderHistory();
-}
-
 // ===== HIỆU ỨNG GỢN SÓNG (RIPPLE) =====
 function initRippleEffect() {
   document.addEventListener('click', function(e) {
@@ -612,6 +653,8 @@ function init() {
   render();
   renderHistory();
   initRippleEffect();
+
+  document.getElementById('siteBrand').addEventListener('click', () => showView('home'));
 
   document.getElementById('addForm').addEventListener('submit', handleSubmit);
   document.getElementById('cancelBtn').addEventListener('click', resetForm);
@@ -657,24 +700,23 @@ function init() {
     if (action === 'delete') deleteItem(id);
     if (action === 'open') openItemModal(id);
     if (action === 'fav') toggleFavorite(id);
-    if (action === 'chapters') openChapterModal(id);
-    if (action === 'read') openReaderModal(id);
+    if (action === 'view-detail') openStoryDetail(id);
   });
 
-  document.getElementById('cancelProgressBtn').addEventListener('click', closeModal);
-  document.getElementById('saveProgressBtn').addEventListener('click', saveProgressAndOpen);
-  document.getElementById('progressInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') saveProgressAndOpen(); });
-
-  document.getElementById('closeChapterModalBtn').addEventListener('click', closeChapterModal);
+  document.getElementById('backToHomeBtn').addEventListener('click', () => showView('home'));
+  document.getElementById('toggleAddChapterBtn').addEventListener('click', () => toggleChapterForm());
   document.getElementById('chapterForm').addEventListener('submit', handleChapterSubmit);
   document.getElementById('cancelChapterEditBtn').addEventListener('click', resetChapterForm);
 
-  document.getElementById('closeReaderBtn').addEventListener('click', closeReaderModal);
-  document.getElementById('prevChapterBtn').addEventListener('click', () => goToChapter(currentReaderChapterIndex - 1));
-  document.getElementById('nextChapterBtn').addEventListener('click', () => goToChapter(currentReaderChapterIndex + 1));
-  document.getElementById('prevChapterBtnBottom').addEventListener('click', () => goToChapter(currentReaderChapterIndex - 1));
-  document.getElementById('nextChapterBtnBottom').addEventListener('click', () => goToChapter(currentReaderChapterIndex + 1));
+  document.getElementById('readerBackBtn').addEventListener('click', () => showView('detail'));
+  document.getElementById('prevChapterBtn').addEventListener('click', () => goToChapter(activeChapterIndex - 1));
+  document.getElementById('nextChapterBtn').addEventListener('click', () => goToChapter(activeChapterIndex + 1));
+  document.getElementById('prevChapterBtnBottom').addEventListener('click', () => goToChapter(activeChapterIndex - 1));
+  document.getElementById('nextChapterBtnBottom').addEventListener('click', () => goToChapter(activeChapterIndex + 1));
   document.getElementById('readerChapterSelect').addEventListener('change', (e) => goToChapter(parseInt(e.target.value, 10)));
+
+  document.getElementById('cancelProgressBtn').addEventListener('click', closeModal);
+  document.getElementById('saveProgressBtn').addEventListener('click', saveProgressAndOpen);
 
   document.getElementById('clearHistoryBtn').addEventListener('click', () => {
     if (confirm('Xóa TOÀN BỘ lịch sử?')) { historyData = []; saveData(); renderHistory(); }
