@@ -152,9 +152,12 @@ function render() {
       : `<div class="item-image-placeholder" data-action="${actionType}" data-id="${item.id}">${placeholder}</div>`;
 
     const openBtn = item.link ? `<button class="btn-open" data-action="open" data-id="${item.id}">🔗 Link web</button>` : '';
-    const mainActionBtn = isStory 
-      ? `<button class="btn-primary" data-action="view-detail" data-id="${item.id}">📖 Xem chương (${(item.chapters || []).length})</button>`
-      : openBtn;
+    
+    const storyActionsHtml = isStory ? `
+      <button class="btn-primary" data-action="read" data-id="${item.id}">📖 Đọc ngay</button>
+      <button class="btn-secondary" data-action="view-detail" data-id="${item.id}">📜 Chương (${(item.chapters || []).length})</button>
+    ` : openBtn;
+
     const favClass = item.isFavorite ? 'active' : '';
 
     return `
@@ -168,7 +171,7 @@ function render() {
           ${tags ? `<div class="item-tags">${tags}</div>` : ''}
         </div>
         <div class="item-actions">
-          ${mainActionBtn}
+          ${storyActionsHtml}
           ${isStory && item.link ? openBtn : ''}
           <button class="btn-edit" data-action="edit" data-id="${item.id}">✏️ Sửa</button>
           <button class="btn-delete" data-action="delete" data-id="${item.id}">🗑️ Xóa</button>
@@ -221,11 +224,11 @@ function renderHistory() {
 
 // ===== TRANG CHI TIẾT TRUYỆN (STORY DETAIL VIEW) =====
 function openStoryDetail(id) {
-  const story = data.stories.find(s => s.id === id);
+  const story = data.stories.find(s => String(s.id) === String(id));
   if (!story) return;
 
-  activeStoryId = id;
-  document.getElementById('chapterStoryId').value = id;
+  activeStoryId = story.id;
+  document.getElementById('chapterStoryId').value = story.id;
 
   const coverBox = document.getElementById('detailCoverContainer');
   coverBox.innerHTML = story.image
@@ -249,7 +252,7 @@ function openStoryDetail(id) {
 
   document.getElementById('startReadingBtn').onclick = () => {
     if (story.chapters && story.chapters.length > 0) {
-      openReader(id, 0);
+      openReader(story.id, 0);
     } else {
       alert('Truyện này chưa có chương nào! Hãy bấm "➕ Thêm chương mới" để bổ sung.');
       toggleChapterForm(true);
@@ -258,7 +261,7 @@ function openStoryDetail(id) {
 
   document.getElementById('editStoryBtn').onclick = () => {
     showView('home');
-    editItem(id);
+    editItem(story.id);
   };
 
   resetChapterForm();
@@ -267,7 +270,7 @@ function openStoryDetail(id) {
 }
 
 function renderChapterGrid() {
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   const container = document.getElementById('detailChapterList');
   const emptyMsg = document.getElementById('emptyChapterMsg');
 
@@ -314,7 +317,7 @@ function resetChapterForm() {
 function handleChapterSubmit(e) {
   e.preventDefault();
   if (!activeStoryId) return;
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   if (!story) return;
 
   const title = document.getElementById('chapterTitleInput').value.trim();
@@ -339,7 +342,7 @@ function handleChapterSubmit(e) {
 }
 
 function editChapter(index) {
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   if (!story || !story.chapters || !story.chapters[index]) return;
   const ch = story.chapters[index];
 
@@ -356,7 +359,7 @@ function editChapter(index) {
 }
 
 function deleteChapter(index) {
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   if (!story || !story.chapters || !story.chapters[index]) return;
   if (!confirm(`Xóa chương "${story.chapters[index].title}"?`)) return;
 
@@ -374,8 +377,15 @@ window.deleteChapter = deleteChapter;
 
 // ===== TRANG ĐỌC CHƯƠNG (FULL READER VIEW) =====
 function openReader(storyId, chapterIndex = 0) {
-  const story = data.stories.find(s => s.id === storyId);
-  if (!story || !story.chapters || story.chapters.length === 0) return;
+  const story = data.stories.find(s => String(s.id) === String(storyId));
+  if (!story) return;
+
+  if (!story.chapters || story.chapters.length === 0) {
+    alert(`Truyện "${story.title}" chưa có chương nào. Đang mở trang chi tiết để bạn thêm chương...`);
+    openStoryDetail(storyId);
+    toggleChapterForm(true);
+    return;
+  }
 
   activeStoryId = storyId;
   activeChapterIndex = Math.max(0, Math.min(chapterIndex, story.chapters.length - 1));
@@ -385,7 +395,7 @@ function openReader(storyId, chapterIndex = 0) {
 }
 
 function goToChapter(index) {
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   if (!story || !story.chapters) return;
   if (index < 0 || index >= story.chapters.length) return;
 
@@ -395,7 +405,7 @@ function goToChapter(index) {
 }
 
 function renderReaderContent() {
-  const story = data.stories.find(s => s.id === activeStoryId);
+  const story = data.stories.find(s => String(s.id) === String(activeStoryId));
   if (!story || !story.chapters) return;
 
   const chapters = story.chapters;
@@ -438,7 +448,7 @@ function renderReaderContent() {
 }
 
 function saveReaderHistory(story, chapterTitle) {
-  const existingIdx = historyData.findIndex(h => h.itemId === story.id);
+  const existingIdx = historyData.findIndex(h => String(h.itemId) === String(story.id));
   const newHist = {
     id: generateId(),
     itemId: story.id,
@@ -458,10 +468,10 @@ function saveReaderHistory(story, chapterTitle) {
   renderHistory();
 }
 
-// ===== XỬ LÝ FORM & BỘ LỌC HOẠT ĐỘNG =====
+// ===== XỬ LÝ FORM & BỘ LỌC =====
 function toggleFavorite(id) {
   const list = getCurrentList();
-  const item = list.find(i => i.id === id);
+  const item = list.find(i => String(i.id) === String(id));
   if (item) {
     item.isFavorite = !item.isFavorite;
     saveData();
@@ -470,10 +480,10 @@ function toggleFavorite(id) {
 }
 
 function openItemModal(id) {
-  const item = getCurrentList().find(i => i.id === id);
+  const item = getCurrentList().find(i => String(i.id) === String(id));
   if (!item || !item.link) return;
   currentProgressItem = item;
-  const existingHist = historyData.find(h => h.itemId === item.id);
+  const existingHist = historyData.find(h => String(h.itemId) === String(item.id));
   document.getElementById('modalTitle').textContent = `Mở: ${item.title}`;
   document.getElementById('modalDesc').textContent = 'Bạn đang chơi đến level/tiến trình nào?';
   document.getElementById('progressInput').value = existingHist ? existingHist.progress : '';
@@ -485,7 +495,7 @@ function saveProgressAndOpen() {
   if (!currentProgressItem) return;
   const progress = document.getElementById('progressInput').value.trim();
   if (progress) {
-    const existingIdx = historyData.findIndex(h => h.itemId === currentProgressItem.id);
+    const existingIdx = historyData.findIndex(h => String(h.itemId) === String(currentProgressItem.id));
     const newHist = { id: generateId(), itemId: currentProgressItem.id, title: currentProgressItem.title, image: currentProgressItem.image, link: currentProgressItem.link, type: 'game', progress: progress, lastReadAt: Date.now() };
     if (existingIdx !== -1) historyData[existingIdx] = { ...historyData[existingIdx], ...newHist, id: historyData[existingIdx].id };
     else historyData.push(newHist);
@@ -525,7 +535,7 @@ function handleSubmit(e) {
 
   const imageUrl = document.getElementById('image').value.trim();
   const finalImage = uploadedImageBase64 || imageUrl;
-  const existingItem = editingId ? getCurrentList().find(i => i.id === editingId) : null;
+  const existingItem = editingId ? getCurrentList().find(i => String(i.id) === String(editingId)) : null;
 
   const item = {
     id: editingId || generateId(),
@@ -543,7 +553,7 @@ function handleSubmit(e) {
 
   const list = getCurrentList();
   if (editingId) {
-    const idx = list.findIndex(i => i.id === editingId);
+    const idx = list.findIndex(i => String(i.id) === String(editingId));
     if (idx !== -1) list[idx] = item;
   } else {
     list.unshift(item);
@@ -554,7 +564,7 @@ function handleSubmit(e) {
 }
 
 function editItem(id) {
-  const item = getCurrentList().find(i => i.id === id);
+  const item = getCurrentList().find(i => String(i.id) === String(id));
   if (!item) return;
   editingId = id;
   document.getElementById('title').value = item.title || '';
@@ -572,12 +582,12 @@ function editItem(id) {
 }
 
 function deleteItem(id) {
-  const item = getCurrentList().find(i => i.id === id);
+  const item = getCurrentList().find(i => String(i.id) === String(id));
   if (!item || !confirm(`Bạn có chắc muốn xóa "${item.title}"?`)) return;
   const list = getCurrentList();
-  const idx = list.findIndex(i => i.id === id);
+  const idx = list.findIndex(i => String(i.id) === String(id));
   if (idx !== -1) list.splice(idx, 1);
-  historyData = historyData.filter(h => h.itemId !== id);
+  historyData = historyData.filter(h => String(h.itemId) !== String(id));
   saveData();
   render();
   renderHistory();
@@ -690,6 +700,7 @@ function init() {
   document.getElementById('advancedFilter').addEventListener('change', handleFilterChange);
   document.getElementById('clearFilterBtn').addEventListener('click', clearFilters);
 
+  // SỰ KIỆN CLICK SẢN PHẨM TRÊN TRANG CHỦ
   document.getElementById('itemsList').addEventListener('click', (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
@@ -700,7 +711,8 @@ function init() {
     if (action === 'delete') deleteItem(id);
     if (action === 'open') openItemModal(id);
     if (action === 'fav') toggleFavorite(id);
-    if (action === 'view-detail') openStoryDetail(id);
+    if (action === 'read') openReader(id, 0);
+    if (action === 'view-detail' || action === 'chapters') openStoryDetail(id);
   });
 
   document.getElementById('backToHomeBtn').addEventListener('click', () => showView('home'));
@@ -724,7 +736,7 @@ function init() {
   document.getElementById('historyList').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action="delete-hist"]');
     if (btn && confirm('Xóa lịch sử của bộ này?')) {
-      historyData = historyData.filter(h => h.id !== btn.dataset.id);
+      historyData = historyData.filter(h => String(h.id) !== String(btn.dataset.id));
       saveData();
       renderHistory();
     }
