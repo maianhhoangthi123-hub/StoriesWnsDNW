@@ -117,36 +117,12 @@
           <div id="detailDesc" class="detail-desc">Mô tả...</div>
           <div class="detail-actions">
             <button type="button" id="startReadingBtn" class="btn-primary">📖 Đọc từ đầu</button>
+            <button type="button" id="openCharacterBtn" class="btn-secondary">🧑 Nhân vật</button>
             <button type="button" id="openExternalLinkBtn" class="btn-open" style="display:none;">🔗 Link đọc gốc</button>
             <button type="button" id="editStoryBtn" class="btn-edit">✏️ Chỉnh sửa truyện</button>
           </div>
         </div>
       </div>
-
-      <!-- Nhân vật & ảnh (tách riêng khỏi form sửa chương) -->
-      <section class="character-management-section">
-        <div class="section-title-bar">
-          <h3>🧑 Nhân vật & ảnh</h3>
-          <button type="button" id="toggleAddCharacterBtn" class="btn-primary">➕ Thêm nhân vật</button>
-        </div>
-        <form id="characterForm" class="chapter-form" style="display:none;">
-          <h4 id="characterFormTitle">➕ Thêm nhân vật mới</h4>
-          <div class="form-row-group">
-            <input type="text" id="characterNameInput" placeholder="Tên nhân vật (nhiều tên gọi thì ngăn cách bằng dấu phẩy: Trần Minh, Minh)..." required>
-          </div>
-          <div class="form-row-group">
-            <input type="url" id="characterImageUrl" placeholder="Dán URL ảnh...">
-            <input type="file" id="characterImageFile" accept="image/*">
-          </div>
-          <img id="characterPreview" class="character-preview" alt="" style="display:none;">
-          <div class="form-actions" style="justify-content:flex-end;">
-            <button type="button" class="btn-secondary" id="cancelCharacterBtn">Hủy</button>
-            <button type="submit" class="btn-primary">💾 Lưu nhân vật</button>
-          </div>
-        </form>
-        <div id="characterList" class="character-grid"></div>
-        <p id="emptyCharacterMsg" class="empty-message">Chưa có nhân vật nào. Thêm nhân vật để khi đọc bấm vào tên là hiện ảnh.</p>
-      </section>
 
       <!-- Quản lý chương -->
       <section class="chapter-management-section">
@@ -209,6 +185,37 @@
         <button type="button" class="btn-secondary" id="cancelProgressBtn">Hủy</button>
         <button type="button" class="btn-primary" id="saveProgressBtn">Lưu & Chuyển đến</button>
       </div>
+    </div>
+  </div>
+
+
+  <!-- CỬA SỔ NHÂN VẬT & ẢNH (mở từ nút "Nhân vật" cạnh "Đọc từ đầu") -->
+  <div id="characterModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content character-modal">
+      <div class="section-title-bar">
+        <h3>🧑 Nhân vật & ảnh</h3>
+        <div class="char-modal-actions">
+          <button type="button" id="toggleAddCharacterBtn" class="btn-primary">➕ Thêm nhân vật</button>
+          <button type="button" id="closeCharacterBtn" class="btn-secondary">✖ Đóng</button>
+        </div>
+      </div>
+      <form id="characterForm" class="chapter-form" style="display:none;">
+          <h4 id="characterFormTitle">➕ Thêm nhân vật mới</h4>
+          <div class="form-row-group">
+            <input type="text" id="characterNameInput" placeholder="Tên nhân vật (nhiều tên gọi thì ngăn cách bằng dấu phẩy: Trần Minh, Minh)..." required>
+          </div>
+          <div class="form-row-group">
+            <input type="url" id="characterImageUrl" placeholder="Dán URL ảnh...">
+            <input type="file" id="characterImageFile" accept="image/*">
+          </div>
+          <img id="characterPreview" class="character-preview" alt="" style="display:none;">
+          <div class="form-actions" style="justify-content:flex-end;">
+            <button type="button" class="btn-secondary" id="cancelCharacterBtn">Hủy</button>
+            <button type="submit" class="btn-primary">💾 Lưu nhân vật</button>
+          </div>
+        </form>
+        <div id="characterList" class="character-grid"></div>
+        <p id="emptyCharacterMsg" class="empty-message">Chưa có nhân vật nào. Thêm nhân vật để khi đọc bấm vào tên là hiện ảnh.</p>
     </div>
   </div>
 
