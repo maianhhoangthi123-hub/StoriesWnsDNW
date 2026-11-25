@@ -252,8 +252,7 @@ function openStoryDetail(id) {
 
   resetChapterForm();
   renderChapterGrid();
-  resetCharForm();
-  renderCharGrid();
+  closeCharModal();
   showView('detail');
 }
 
@@ -366,6 +365,16 @@ function resetCharForm() {
   setCharPreview('');
   $('characterFormTitle').textContent = '➕ Thêm nhân vật mới';
   $('characterForm').style.display = 'none';
+}
+
+function openCharModal() {
+  renderCharGrid();
+  $('characterModal').style.display = 'flex';
+}
+
+function closeCharModal() {
+  resetCharForm();
+  $('characterModal').style.display = 'none';
 }
 
 function renderCharGrid() {
@@ -712,6 +721,9 @@ function init() {
   });
 
   // Nhân vật
+  $('openCharacterBtn').addEventListener('click', openCharModal);
+  $('closeCharacterBtn').addEventListener('click', closeCharModal);
+  $('characterModal').addEventListener('click', e => { if (e.target === $('characterModal')) closeCharModal(); });
   $('toggleAddCharacterBtn').addEventListener('click', () => toggleCharForm());
   $('characterForm').addEventListener('submit', handleCharSubmit);
   $('cancelCharacterBtn').addEventListener('click', resetCharForm);
