@@ -128,6 +128,9 @@ button:active:not(:disabled) { transform: scale(.97); }
 .character-actions { display: flex; gap: 4px; padding: 0 .5rem .6rem; }
 .character-actions button { flex: 1; padding: .3rem; font-size: .8rem; }
 
+.modal-content.character-modal { max-width: 640px; max-height: 90vh; overflow-y: auto; }
+.char-modal-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
 /* ===== TRANG ĐỌC ===== */
 #viewReader { min-height: 85vh; display: flex; flex-direction: column; }
 .reader-top-bar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2d2d44; padding-bottom: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 1rem; }
